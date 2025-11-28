@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cardiac-views"
+version = "0.1.0"
+description = "Generate VLA/HLA/SA cardiac orthogonal views from volumetric DAT data."
+requires-python = ">=3.9"
+license = "MIT"
+authors = [
+    {name = "wangjincheng"}
+]
+keywords = ["cardiac", "medical-imaging", "visualization", "SPECT", "PET"]
+dependencies = [
+    "numpy",
+    "scipy",
+    "matplotlib",
+    "pydicom",
+]
+
+[project.urls]
+Homepage = "https://github.com/wangjincheng722/cardiac-views"
+
+[project.scripts]
+cardiac-views = "cardiac_views.cli:main"
+
+[tool.setuptools]
+packages = ["cardiac_views"]
