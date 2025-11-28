@@ -104,27 +104,18 @@ def load_dicom_palette(dicom_path: Path) -> LinearSegmentedColormap | None:
         return None
 
 
-def _build_hot_metal() -> LinearSegmentedColormap:
-    hot_metal_colors = [
-        (0.0, 0.0, 0.0),
-        (0.33, 0.0, 0.0),
-        (0.66, 0.0, 0.0),
-        (1.0, 0.33, 0.0),
-        (1.0, 0.66, 0.0),
-        (1.0, 1.0, 0.0),
-        (1.0, 1.0, 0.33),
-        (1.0, 1.0, 0.66),
-        (1.0, 1.0, 1.0),
-    ]
-    return LinearSegmentedColormap.from_list("hot_metal", hot_metal_colors, N=256)
+def _get_default_palette_path() -> Path:
+    """获取默认调色板路径（包内的 pet.dcm）"""
+    return Path(__file__).parent / "pet.dcm"
 
 
 def _resolve_cmap(palette_path: Path | None) -> LinearSegmentedColormap:
-    if palette_path:
-        cmap = load_dicom_palette(palette_path)
-        if cmap is not None:
-            return cmap
-    return _build_hot_metal()
+    if palette_path is None:
+        palette_path = _get_default_palette_path()
+    cmap = load_dicom_palette(palette_path)
+    if cmap is not None:
+        return cmap
+    raise ValueError(f"无法加载调色板: {palette_path}")
 
 
 def _derive_output_path(dat_path: Path, output_dir: Path | None) -> Path:

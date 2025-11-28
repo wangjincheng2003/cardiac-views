@@ -19,3 +19,6 @@ cardiac-views = "cardiac_views.cli:main"
 
 [tool.setuptools]
 packages = ["cardiac_views"]
+
+[tool.setuptools.package-data]
+"*" = ["*.dcm"]
