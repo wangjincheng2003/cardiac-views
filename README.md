@@ -5,7 +5,7 @@
 ## 安装
 
 ```bash
-pip install git+https://github.com/wangjincheng722/cardiac-views.git
+pip install git+https://github.com/wangjincheng2003/cardiac-views.git
 ```
 
 ## 使用

@@ -20,7 +20,7 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/wangjincheng722/cardiac-views"
+Homepage = "https://github.com/wangjincheng2003/cardiac-views"
 
 [project.scripts]
 cardiac-views = "cardiac_views.cli:main"
