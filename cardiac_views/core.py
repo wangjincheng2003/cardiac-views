@@ -44,7 +44,7 @@ def load_raw_volume(
     dtype_candidates: Iterable[np.dtype] = DEFAULT_DTYPE_CANDIDATES,
     sigma: float = DEFAULT_SIGMA,
 ) -> tuple[np.ndarray, float, float]:
-    """读取体数据并插值到指定尺寸，返回体数据与原始最小/最大值。"""
+    """读取 .dat 原始体数据并插值到指定尺寸，返回体数据与原始最小/最大值。"""
     frame_size = int(np.prod(vox_dims))
 
     for dtype in dtype_candidates:
@@ -71,6 +71,46 @@ def load_raw_volume(
 
     # 若全部尝试失败则报错
     raise ValueError(f"无法以候选数据类型读取 {path}")
+
+
+def load_dicom_volume(
+    path: Path,
+    target_dims: Sequence[int] = DEFAULT_TARGET_DIMS,
+    sigma: float = DEFAULT_SIGMA,
+) -> tuple[np.ndarray, float, float]:
+    """读取 DICOM 体数据并插值到指定尺寸，返回体数据与原始最小/最大值。"""
+    ds = pydicom.dcmread(path)
+    pixel_array = ds.pixel_array.astype(np.float64)
+
+    # 应用 RescaleSlope 和 RescaleIntercept（如果存在）
+    slope = getattr(ds, "RescaleSlope", 1.0)
+    intercept = getattr(ds, "RescaleIntercept", 0.0)
+    pixel_array = pixel_array * slope + intercept
+
+    # 获取体数据维度
+    if pixel_array.ndim == 2:
+        # 单帧 DICOM，扩展为 3D
+        vol = pixel_array[np.newaxis, :, :]
+    elif pixel_array.ndim == 3:
+        vol = pixel_array
+    else:
+        raise ValueError(f"不支持的 DICOM 数据维度: {pixel_array.ndim}")
+
+    original_min, original_max = float(vol.min()), float(vol.max())
+
+    # 归一化
+    if original_max > original_min:
+        vol = (vol - original_min) / (original_max - original_min)
+
+    # 插值到目标尺寸
+    current_dims = vol.shape
+    zoom_factors = tuple(t / c for t, c in zip(target_dims, current_dims))
+    vol = zoom(vol, zoom_factors, order=0)
+
+    if sigma and sigma > 0:
+        vol = gaussian_filter(vol, sigma=sigma)
+
+    return vol, original_min, original_max
 
 
 def load_dicom_palette(dicom_path: Path) -> LinearSegmentedColormap | None:
@@ -353,6 +393,55 @@ def process_dat_file(
     return save_path
 
 
+def process_dicom_file(
+    dicom_path: Path,
+    *,
+    palette_path: Path | None = None,
+    output_dir: Path | None = None,
+    target_dims: Sequence[int] = DEFAULT_TARGET_DIMS,
+    sigma: float = DEFAULT_SIGMA,
+    color_min: float = DEFAULT_COLOR_MIN,
+    color_max: float = DEFAULT_COLOR_MAX,
+    use_auto_color_max: bool = False,
+    vla_plan: SlicePlan = DEFAULT_VLA_PLAN,
+    hla_plan: SlicePlan = DEFAULT_HLA_PLAN,
+    sa_plan: SlicePlan = DEFAULT_SA_PLAN,
+    show_colorbar: bool = False,
+) -> Path:
+    vol, original_min, original_max = load_dicom_volume(
+        dicom_path,
+        target_dims=target_dims,
+        sigma=sigma,
+    )
+
+    save_path = _derive_output_path(dicom_path, output_dir)
+    cmap = _resolve_cmap(palette_path)
+
+    make_figure(
+        vol,
+        original_min,
+        original_max,
+        save_path,
+        cmap=cmap,
+        color_min=color_min,
+        color_max=color_max,
+        use_auto_color_max=use_auto_color_max,
+        vla_plan=vla_plan,
+        hla_plan=hla_plan,
+        sa_plan=sa_plan,
+        show_colorbar=show_colorbar,
+    )
+    return save_path
+
+
+DICOM_EXTENSIONS = {".dcm", ".dicom"}
+
+
+def _is_dicom_file(path: Path) -> bool:
+    """判断文件是否为 DICOM 格式"""
+    return path.suffix.lower() in DICOM_EXTENSIONS
+
+
 def generate_views(
     input_path: Path,
     *,
@@ -376,28 +465,46 @@ def generate_views(
 
     if path.is_dir():
         dat_files = sorted(path.glob("*.dat"))
-        if not dat_files:
-            raise FileNotFoundError(f"目录中未找到.dat文件: {path}")
+        dcm_files = sorted(path.glob("*.dcm")) + sorted(path.glob("*.dicom"))
+        all_files = dat_files + dcm_files
+        if not all_files:
+            raise FileNotFoundError(f"目录中未找到 .dat 或 .dcm 文件: {path}")
     else:
-        dat_files = [path]
+        all_files = [path]
 
     results: List[Path] = []
-    for dat_file in dat_files:
-        save_path = process_dat_file(
-            dat_file,
-            palette_path=palette_path,
-            output_dir=output_dir,
-            vox_dims=vox_dims,
-            target_dims=target_dims,
-            dtype_candidates=dtype_candidates,
-            sigma=sigma,
-            color_min=color_min,
-            color_max=color_max,
-            use_auto_color_max=use_auto_color_max,
-            vla_plan=vla_plan,
-            hla_plan=hla_plan,
-            sa_plan=sa_plan,
-            show_colorbar=show_colorbar,
-        )
+    for file_path in all_files:
+        if _is_dicom_file(file_path):
+            save_path = process_dicom_file(
+                file_path,
+                palette_path=palette_path,
+                output_dir=output_dir,
+                target_dims=target_dims,
+                sigma=sigma,
+                color_min=color_min,
+                color_max=color_max,
+                use_auto_color_max=use_auto_color_max,
+                vla_plan=vla_plan,
+                hla_plan=hla_plan,
+                sa_plan=sa_plan,
+                show_colorbar=show_colorbar,
+            )
+        else:
+            save_path = process_dat_file(
+                file_path,
+                palette_path=palette_path,
+                output_dir=output_dir,
+                vox_dims=vox_dims,
+                target_dims=target_dims,
+                dtype_candidates=dtype_candidates,
+                sigma=sigma,
+                color_min=color_min,
+                color_max=color_max,
+                use_auto_color_max=use_auto_color_max,
+                vla_plan=vla_plan,
+                hla_plan=hla_plan,
+                sa_plan=sa_plan,
+                show_colorbar=show_colorbar,
+            )
         results.append(save_path)
     return results

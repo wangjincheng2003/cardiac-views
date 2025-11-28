@@ -26,13 +26,13 @@ def _slice_plan(values: Sequence[int], label: str) -> SlicePlan:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="从体数据绘制VLA/HLA/SA心脏断层图，可处理单个文件或目录内全部.dat。",
+        description="从体数据绘制VLA/HLA/SA心脏断层图，支持 .dat 和 .dcm 文件，可处理单个文件或目录。",
     )
     parser.add_argument(
         "input",
         nargs="?",
         default="dat",
-        help="输入.dat文件或目录（默认 ./dat）",
+        help="输入 .dat/.dcm 文件或目录（默认 ./dat）",
     )
     parser.add_argument(
         "-p",
