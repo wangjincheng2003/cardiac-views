@@ -11,9 +11,11 @@ from .core import (
     SlicePlan,
     generate_views,
     load_dicom_palette,
+    load_dicom_volume,
     load_raw_volume,
     make_figure,
     process_dat_file,
+    process_dicom_file,
 )
 
 __all__ = [
@@ -25,7 +27,9 @@ __all__ = [
     "SlicePlan",
     "generate_views",
     "load_dicom_palette",
+    "load_dicom_volume",
     "load_raw_volume",
     "make_figure",
     "process_dat_file",
+    "process_dicom_file",
 ]

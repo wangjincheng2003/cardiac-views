@@ -18,7 +18,7 @@ DEFAULT_VOX_DIMS: Tuple[int, int, int] = (48, 48, 48)
 DEFAULT_TARGET_DIMS: Tuple[int, int, int] = (256, 256, 256)
 DEFAULT_DTYPE_CANDIDATES = (np.float32, np.float64, np.uint16, np.int16, np.uint8)
 DEFAULT_COLOR_MIN: float = 0.0
-DEFAULT_COLOR_MAX: float = 4000.0
+DEFAULT_COLOR_MAX: float = 10000.0
 DEFAULT_SIGMA: float = 4.0
 
 
@@ -34,7 +34,7 @@ class SlicePlan:
 
 DEFAULT_VLA_PLAN = SlicePlan(117, 144, 8)
 DEFAULT_HLA_PLAN = SlicePlan(110, 145, 8)
-DEFAULT_SA_PLAN = SlicePlan(40, 90, 8)
+DEFAULT_SA_PLAN = SlicePlan(80, 160, 8)
 
 
 def load_raw_volume(
@@ -116,7 +116,7 @@ def load_dicom_volume(
 def load_dicom_palette(dicom_path: Path) -> LinearSegmentedColormap | None:
     """从DICOM文件读取调色板，失败返回None。"""
     try:
-        ds = pydicom.dcmread(dicom_path)
+        ds = pydicom.dcmread(dicom_path, force=True)
         if not hasattr(ds, "RedPaletteColorLookupTableData"):
             return None
 

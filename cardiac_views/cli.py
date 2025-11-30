@@ -83,12 +83,24 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--auto-color-max",
         action="store_true",
-        help="使用VLA第二张上半部分的最大值作为颜色上阈值",
+        default=True,
+        help="使用VLA第二张上半部分的最大值作为颜色上阈值（默认开启）",
+    )
+    parser.add_argument(
+        "--no-auto-color-max",
+        action="store_true",
+        help="禁用自动颜色范围，使用 --color-max 指定的值",
     )
     parser.add_argument(
         "--colorbar",
         action="store_true",
-        help="在输出图中添加颜色条",
+        default=True,
+        help="在输出图中添加颜色条（默认开启）",
+    )
+    parser.add_argument(
+        "--no-colorbar",
+        action="store_true",
+        help="不显示颜色条",
     )
     parser.add_argument(
         "--vla",
@@ -137,6 +149,10 @@ def main(argv: Sequence[str] | None = None) -> None:
     hla_plan = _slice_plan(args.hla, "HLA")
     sa_plan = _slice_plan(args.sa, "SA")
 
+    # 处理 --no-xxx 参数覆盖默认值
+    use_auto = args.auto_color_max and not args.no_auto_color_max
+    show_bar = args.colorbar and not args.no_colorbar
+
     try:
         results = generate_views(
             Path(args.input),
@@ -147,11 +163,11 @@ def main(argv: Sequence[str] | None = None) -> None:
             sigma=args.sigma,
             color_min=args.color_min,
             color_max=args.color_max,
-            use_auto_color_max=args.auto_color_max,
+            use_auto_color_max=use_auto,
             vla_plan=vla_plan,
             hla_plan=hla_plan,
             sa_plan=sa_plan,
-            show_colorbar=args.colorbar,
+            show_colorbar=show_bar,
         )
     except Exception as exc:  # pragma: no cover - CLI友好错误输出
         parser.exit(status=1, message=f"错误: {exc}\n")
